@@ -1,8 +1,14 @@
 from fastapi import FastAPI, UploadFile, File
 from pathlib import Path
 import tempfile
+from functools import lru_cache
 
 app = FastAPI(title="Real-Time Object Detection")
+
+@lru_cache(maxsize=1)
+def get_model():
+    from ultralytics import YOLO
+    return YOLO("yolov8n.pt")
 
 @app.get("/health")
 def health(): return {"status": "ok"}
@@ -14,8 +20,7 @@ async def detect(image: UploadFile = File(...)):
         handle.write(data)
         path = handle.name
     try:
-        from ultralytics import YOLO
-        results = YOLO("yolov8n.pt")(path, verbose=False)
+        results = get_model()(path, verbose=False)
         detections = []
         for result in results:
             for box in result.boxes:
